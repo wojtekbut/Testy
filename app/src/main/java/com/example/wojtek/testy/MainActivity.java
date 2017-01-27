@@ -147,9 +147,9 @@ public class MainActivity extends Activity implements SensorEventListener, View.
 
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                String msg = "x:" + charSequence.toString() + "\n";
+                String msg = "x:" + charSequence.toString();// + "\n";
                 byte[] bytes = msg.getBytes(charset);
-                mirror.write(bytes);
+                mirror.write(msg);
             }
 
             @Override
@@ -165,9 +165,9 @@ public class MainActivity extends Activity implements SensorEventListener, View.
 
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                String msg = "y:" + charSequence.toString() + "\n";
+                String msg = "y:" + charSequence.toString(); // + "\n";
                 byte[] bytes = msg.getBytes(charset);
-                mirror.write(bytes);
+                mirror.write(msg);
             }
 
             @Override
