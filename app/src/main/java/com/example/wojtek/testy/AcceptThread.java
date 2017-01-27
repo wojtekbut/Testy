@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
 import android.util.Log;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -121,6 +122,39 @@ public class AcceptThread extends Thread {
         } catch (IOException e) {
             //Log.e(TAG, "Exception during write", e);
         }
+    }
+
+    public void write(String string) {
+        String poczatek, koniec;
+        byte[] bpoczatek, bkoniec, bstring, wiadomosc;
+        poczatek = "stArt:";
+        koniec = ":koNiec";
+        bpoczatek = poczatek.getBytes();
+        bkoniec = koniec.getBytes();
+        bstring = string.getBytes();
+        byte[] objetosc = new byte[2];
+        int dlugosc = bstring.length;
+        if (dlugosc < 256) {
+            objetosc[0] = 0;
+            objetosc[1] = (byte) dlugosc;
+        } else if (dlugosc > 255 && dlugosc < 65535) {
+            objetosc[0] = (byte) (dlugosc / 256);
+            objetosc[1] = (byte) (dlugosc - ((int) objetosc[0] * 256));
+        } else {
+            Log.e("Write", "Wiadomość za długa.");
+        }
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        try {
+            outputStream.write(bpoczatek);
+            outputStream.write(objetosc);
+            outputStream.write(bstring);
+            outputStream.write(bkoniec);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        wiadomosc = outputStream.toByteArray();
+        write(wiadomosc);
     }
 
     public void writeBonded(ArrayList list) {
