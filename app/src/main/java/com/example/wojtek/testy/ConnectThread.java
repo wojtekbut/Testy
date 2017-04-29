@@ -113,6 +113,9 @@ public class ConnectThread extends Thread {
                 }
 
             } catch (IOException e) {
+                mHandler.obtainMessage(4, mmDevice.toString()).sendToTarget();
+                cancel();
+                return;
                 // break;
             }
         }
