@@ -22,8 +22,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Set;
 
 public class MainActivity extends Activity implements SensorEventListener, View.OnClickListener, CompoundButton.OnCheckedChangeListener {
@@ -50,6 +54,8 @@ public class MainActivity extends Activity implements SensorEventListener, View.
     private float[] results = new float[3];
     private float[] resultsdeg = new float[3];
     private BluetoothAdapter mBluetoothAdapter = null;
+
+
     Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
@@ -76,6 +82,8 @@ public class MainActivity extends Activity implements SensorEventListener, View.
                     polaczenie = null;
                     break;
                 case 5:  // rozkazy z mirrora
+                    //text = text.substring(2);
+                    Log.d("case 5: ", "rozkaz: " + text);
                     if (text.equals("on")) {
                         toggle.toggle();
                     } else if (text.equals("off")) {
@@ -85,13 +93,31 @@ public class MainActivity extends Activity implements SensorEventListener, View.
                         if (pairedDevices.size() > 0) {
                             ArrayList<String> mystring = new ArrayList<String>();
                             for (BluetoothDevice mydevice : pairedDevices) {
-                                String name = device.getName();
+                                String name = mydevice.getName();
                                 if (name.length() > 20) {
                                     name = name.substring(0, 20);
                                 }
-                                mystring.add(device.getAddress() + name);
+                                mystring.add(mydevice.getAddress() + "\n" + name);
                             }
-                            mirror.writeBonded(mystring);
+
+                            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                            try {
+                                ObjectOutputStream oos = new ObjectOutputStream(baos);
+                                oos.writeObject(mystring);
+                                oos.close();
+                                byte[] bondedbuff = baos.toByteArray();
+                                Log.d("bonded:", "dlugosc listy: " + bondedbuff.length);
+                                Log.d("bonded:", "lista: " + Arrays.toString(bondedbuff));
+
+                                //String bondhex
+                                //for (int i =0; i< bondedbuff.length;i++)
+                                mirror.writeBonded(bondedbuff);
+
+
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+
                         }
 
                     } else {
@@ -100,6 +126,10 @@ public class MainActivity extends Activity implements SensorEventListener, View.
                     break;
                 case 6:
                     statusard.setText("Połączono z:\n" + text);
+                    break;
+                case 7:     //połącz z arduino;
+                    Log.d("hand 7", "połacz z Ard: " + text);
+                    polaczZArduino(text);
                     break;
 
 
@@ -112,7 +142,6 @@ public class MainActivity extends Activity implements SensorEventListener, View.
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         setContentView(R.layout.activity_main);
         xval = (TextView) findViewById(R.id.xval);
         yval = (TextView) findViewById(R.id.yval);
@@ -120,22 +149,18 @@ public class MainActivity extends Activity implements SensorEventListener, View.
         statusard = (TextView) findViewById(R.id.textView4);
         status.setText("Not conected.");
         statusard.setText("Not conected.");
-
         toggle = (ToggleButton) findViewById(R.id.toggleButton);
         arduino = (Button) findViewById(R.id.arduino);
         toggle.setOnCheckedChangeListener(this);
         toggle.setTextColor(Color.RED);
-
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBluetoothAdapter == null) {
             Toast.makeText(this, "Urządzenie nie obsługuje Bluetooth", Toast.LENGTH_LONG).show();
             this.finish();
         }
-
         sm = (SensorManager) getSystemService(SENSOR_SERVICE);
         accel = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         magnet = sm.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
-
         mirror = new AcceptThread(mHandler);
         mirror.start();
         xval.addTextChangedListener(new TextWatcher() {
@@ -147,9 +172,10 @@ public class MainActivity extends Activity implements SensorEventListener, View.
 
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                String msg = "x:" + charSequence.toString();// + "\n";
-                byte[] bytes = msg.getBytes(charset);
-                mirror.write(msg);
+                String roz = "x:";
+                String msg = charSequence.toString();// + "\n";
+                //byte[] bytes = msg.getBytes(charset);
+                mirror.writes(roz, msg);
             }
 
             @Override
@@ -165,9 +191,10 @@ public class MainActivity extends Activity implements SensorEventListener, View.
 
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                String msg = "y:" + charSequence.toString(); // + "\n";
-                byte[] bytes = msg.getBytes(charset);
-                mirror.write(msg);
+                String roz = "y:";
+                String msg = charSequence.toString(); // + "\n";
+                //byte[] bytes = msg.getBytes(charset);
+                mirror.writes(roz, msg);
             }
 
             @Override
@@ -213,7 +240,6 @@ public class MainActivity extends Activity implements SensorEventListener, View.
     public void onClick(View v) {
         Log.d("click", "onClick d: kliknieto - " + v.toString());
 
-
     }
 
     @Override
@@ -245,7 +271,6 @@ public class MainActivity extends Activity implements SensorEventListener, View.
             }
             xval.setText(x);
             yval.setText(y);
-
         }
     }
 
@@ -275,35 +300,33 @@ public class MainActivity extends Activity implements SensorEventListener, View.
             sm.unregisterListener(this);
             xval.setText("- - -");
             yval.setText("- - -");
-
         }
     }
 
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode == RESULT_OK) {
             adresMac = data.getStringExtra("adres");
-            String nazwa = data.getStringExtra(("nazwa"));
-            statusard.setText("Łączę z: " + nazwa.concat(adresMac));
-            //setContentView(R.layout.activity_main);
-//            try {
-//                String TAG;
-//                TAG = "result";
-//                Log.d(TAG, "ide spac.");
-//                Thread.sleep(1000);
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
-
-            device = mBluetoothAdapter.getRemoteDevice(adresMac);
-            polaczenie = new ConnectThread(device, mHandler);
-            polaczenie.start();
-
-            //polacz(adresMac);
-
-
+            //String nazwa = data.getStringExtra(("nazwa"));
+            //statusard.setText("Łączę z: " + nazwa.concat(adresMac));
+            //device = mBluetoothAdapter.getRemoteDevice(adresMac);
+            //polaczenie = new ConnectThread(device, mHandler);
+            //polaczenie.start();
+            polaczZArduino(adresMac);
         } else {
             statusard.setText("Nie wybrano adresu.\nPołącz jeszcze raz.");
         }
+    }
+
+    protected void polaczZArduino(String address) {
+        if (statusard.getText().toString().startsWith("Połączono")) {
+            Toast.makeText(this, "Jastem już połączony z Arduino.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        device = mBluetoothAdapter.getRemoteDevice(address);
+        String nazwa = device.getName();
+        statusard.setText("Łączę z: " + nazwa.concat(address));
+        polaczenie = new ConnectThread(device, mHandler);
+        polaczenie.start();
     }
 
 
