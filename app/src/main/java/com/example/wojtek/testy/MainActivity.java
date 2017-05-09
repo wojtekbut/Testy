@@ -28,6 +28,7 @@ import java.util.Set;
 
 public class MainActivity extends Activity implements SensorEventListener, View.OnClickListener, CompoundButton.OnCheckedChangeListener {
 
+    // dodana nowa linia
     public static final float ALPHA = 0.20f;
     private static final int REQUEST_ENABLE_BT = 3;
     public AcceptThread mirror;
